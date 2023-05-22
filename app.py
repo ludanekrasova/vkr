@@ -43,7 +43,7 @@ root = root_dir() + '/'
 data = pd.read_csv(root + 'df_rank.csv')
 
 def get_result(data, request):
-    #предсказание рангов по выбранным параметрам
+    # Предсказание рангов по выбранным параметрам
     if request.args.get('branch'):
 
         headers =  {
@@ -108,7 +108,7 @@ def get_result(data, request):
     return(result[0:50])
 
 def color_change(elev):
-    #цвета маркеров
+    # Цвета маркеров
     if(elev >= 40):
         return('beige')
     elif(elev >=30) & (elev <40):
@@ -124,18 +124,19 @@ def color_change(elev):
 @app.route('/', methods=['GET', 'POST'])
 def index():
 
-    #предсказание
+    # Предсказание
     result = get_result(data, request)
     rank = result.index
     lat, lon = result['lat'], result['lon']
     elevation = result['ap_mac']
+    address = result['address']
 
-    #карта
+    # Карта
     folium_map = folium.Map(location=[55.73702, 37.62256], zoom_start = 13, tiles = "OpenStreetMap")
 
-    #маркеры
-    for lat, lon, elevation, rank in zip(lat, lon, elevation, rank):
-        folium.Marker(location=[lat, lon], popup="Ранг " + str(rank), icon=folium.Icon(color = color_change(rank))).add_to(folium_map)
+    # Маркеры
+    for lat, lon, elevation, rank, address in zip(lat, lon, elevation, rank, address):
+        folium.Marker(location=[lat, lon], popup="Ранг " + str(rank) + "<br>Адрес: "+ address, icon=folium.Icon(color = color_change(rank))).add_to(folium_map)
         #return folium_map._repr_html_()
 
     folium_map.save(root + '/templates/map.html')

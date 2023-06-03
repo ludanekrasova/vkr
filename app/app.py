@@ -139,7 +139,7 @@ def index():
         folium.Marker(location=[lat, lon], popup="Ранг " + str(rank) + "<br>Адрес: "+ address, icon=folium.Icon(color = color_change(rank))).add_to(folium_map)
         #return folium_map._repr_html_()
 
-    folium_map.save(root + '/templates/map.html')
+    folium_map.save(root + '/tmp/map.html')
 
     return render_template('index.html')
 
@@ -147,13 +147,13 @@ def index():
 def map():
 
     r = int(random.triangular(0,100))
-    t = root+"templates/map_{i}.html"
+    t = root+"tmp/map_{i}.html"
     for i in range(0,100):
         f = t.format(i=i)
         if os.path.exists(f):
             os.remove(f)
     f = t.format(i=r)
-    shutil.copy(root+"templates/map.html", f)
+    shutil.copy(root+"tmp/map.html", f)
 
     r = make_response(render_template(os.path.split(f)[1]))
     r.cache_control.max_age = 0

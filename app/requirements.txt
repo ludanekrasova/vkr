@@ -1,5 +1,0 @@
-Flask
-folium==0.14.0
-geopandas==0.12.2
-numpy
-pandas

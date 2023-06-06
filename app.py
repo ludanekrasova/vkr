@@ -16,7 +16,7 @@ service_col = ['Количество_бытовые_rank', 'Выручка_бы�
 culture_col = ['Количество_общепит_rank', 'Количество_клубы_rank', ]
 medical_col = ['Количество_медицина_rank', 'Выручка_медицина_rank', 'Прибыль_медицина_rank']
 
-top_n=20 # сколько точек показываем
+top_n=30 # Вывод точек на карту
 
 app = Flask(__name__, static_url_path='/static')
 app.secret_key = "super secret key"
@@ -35,7 +35,7 @@ root = root_dir() + '/'
 data = pd.read_csv(root + 'df_rank.csv')
 
 def get_result(data, request):
-    # предсказание рангов по выбранным параметрам
+    # Предсказание рангов по выбранным параметрам
     if request.args.get('branch'):
         branch = request.args.get('branch')
         money = request.args.get('money')
@@ -121,7 +121,7 @@ def get_result(data, request):
 
         data['rank'] = data[cols].mean(axis=1)
 
-        #точки для визуализации
+        # Точки для визуализации
         result = data.sort_values(by='rank', ascending=True)
         result['new_rank']=result['rank'].rank(ascending=True, method='first').astype(int)
 
@@ -131,7 +131,7 @@ def get_result(data, request):
     return result[0:top_n]
 
 def color_change(elev):
-    # цвета маркеров
+    # Цвета маркеров
     if(elev >= 20):
         return('beige')
     elif(elev >=15) & (elev <20):
@@ -146,33 +146,33 @@ def color_change(elev):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    # получение параметров из формы
+    # Получение параметров из формы
     department = request.args.get('department')
     branch = request.args.get('branch')
-    #предсказание по введенным значениям
+    # Предсказание по введенным значениям
     result = get_result(data, request)
     session['data'] = result[['lat', 'lon', 'Адрес', 'new_rank']].to_dict('list')
     return render_template('index.html', department=department, branch=branch)
 
 @app.route('/map', methods=['GET', 'POST'])
 def map():
-    # рендерин карты по введенным данным
+    # Рендеринг карты по введенным данным
     try:
         result = session.get('data', None)
         rank = result['new_rank']
         lat, lon = result['lat'], result['lon']
         elevation = result['Адрес']  # адрес точки
     except:
-        #заглушка, если данные не пришли
+        # Заглушка, если данные не пришли
         lat = (55.7211, 55.7371)
         lon = (37.6061, 37.6237)
         elevation = (12, 14)
         rank = (1, 2)
     
-    # карта
+    # Карта
     folium_map = folium.Map(location=[55.73702, 37.62256], zoom_start = 11, tiles = "OpenStreetMap")
 
-    # маркеры
+    # Маркеры
     for lat, lon, elevation, rank in zip(lat, lon, elevation, rank):
         icon_number = plugins.BeautifyIcon(number= rank, border_color=color_change(rank), text_color='darkred', \
                       inner_icon_style='margin-top:0;')

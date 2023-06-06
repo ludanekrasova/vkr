@@ -1,33 +1,25 @@
 #!flask/bin/python
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, make_response
+from flask import Flask, render_template, request, session, render_template_string
 import pandas as pd
 import folium
+from folium import plugins
 import os
-import random
-import shutil
 
-retail_list = ['Супермаркет', 'Магазин у дома', 'Магазин спиртных напитков', 'Кондитерский магазин', 'Магазин здоровой пищи','Бытовая химия', 'Магазин косметики', 'Магазин одежды', 'Газетный киоск']
-service_list = ['Парикмахерская', 'Салон красоты', 'Спа салон', 'Ремонт обуви', 'Ремонт ювелирных изделий', 'Автомойка', 'Фото на документы']
-catering_list = ['Ресторан', 'Кафе', 'Бар', 'Кофе на вынос', 'Киоск мороженного']
-culture_list = ['Ночной клуб']
-medical_list = ['Клиника', 'Стоматологическая клиника', 'Ветеринарная клиника', 'Женская консультация']
+retail_list = ['Супермаркет', 'Магазин спиртных напитков', 'Кондитерский магазин', 'Магазин здоровой пищи']
+service_list = ['Парикмахерская', 'Спа салон', 'Ремонт обуви', 'Ремонт ювелирных изделий', 'Фото на документы']
+culture_list = ['Ресторан', 'Кафе', 'Бар', 'Ночной клуб']
+medical_list = ['Клиника', 'Стоматологическая клиника', 'Ветеринарная клиника']
 
-reatail_col = ['Количество_торговля_rank', 'Выручка_торговля_rank', 'Прибыль_торговля_rank', 'riteil_rank']
-service_col = ['Количество_бытовые_rank', 'Выручка_бытовые_rank', 'Прибыль_бытовые_rank', 'service_rank']
-catering_col = ['Количество_общепит_rank', 'Выручка_общепит_rank', 'Прибыль_общепит_rank', 'riteil_rank']
-culture_col = ['Количество_клубы_rank', 'Выручка_клубы_rank', 'Прибыль_клубы_rank', 'club_rank']
-medical_col = ['Количество_медицина_rank', 'Выручка_медицина_rank', 'Прибыль_медицина_rank', 'med_rank', 'vet_rank', 'stomat_rank']
+reatail_col = ['Количество_торговля_rank', 'Выручка_торговля_rank', 'Прибыль_торговля_rank', 'Магазины_ранг']
+service_col = ['Количество_бытовые_rank', 'Выручка_бытовые_rank', 'Прибыль_бытовые_rank']
+culture_col = ['Количество_общепит_rank', 'Количество_клубы_rank', ]
+medical_col = ['Количество_медицина_rank', 'Выручка_медицина_rank', 'Прибыль_медицина_rank']
 
-weekdays = ['day_1_rank', 'day_2_rank', 'day_3_rank', 'day_4_rank', 'day_5_rank',]
-weekend = ['day_6_rank', 'day_7_rank']
-
-work_time = ['hour_6_rank', 'hour_7_rank', 'hour_8_rank', 'hour_9_rank', 'hour_10_rank', 'hour_11_rank', 'hour_12_rank', 'hour_13_rank', 'hour_14_rank', 'hour_15_rank', 'hour_16_rank', 'hour_17_rank', 'hour_18_rank']
-rest_time = ['hour_19_rank', 'hour_20_rank', 'hour_21_rank', 'hour_22_rank', 'hour_23_rank','hour_0_rank', 'hour_1_rank', 'hour_2_rank', 'hour_3_rank', 'hour_4_rank', 'hour_5_rank', ]
-
-default_col = weekdays + work_time + ['crime_rank', 'money_rank', 'device_count_rank', 'device_nunique_rank', 'device_frec_rank', 'user_nunique_rank', 'duration_rank', 'duration_min_rank', 'duration_max_rank', 'toilet_rank', 'metro_rank']
+top_n=20 # сколько точек показываем
 
 app = Flask(__name__, static_url_path='/static')
+app.secret_key = "super secret key"
 
 @app.after_request
 def after_request(response):
@@ -43,79 +35,110 @@ root = root_dir() + '/'
 data = pd.read_csv(root + 'df_rank.csv')
 
 def get_result(data, request):
-    # Предсказание рангов по выбранным параметрам
+    # предсказание рангов по выбранным параметрам
     if request.args.get('branch'):
-
-        headers =  {
-            'branch': 'Вид деятельности',
-            'week': 'Режим неделя',
-            'day':'Режим сутки',
-            'hour':'Режим обед',
-            'money':'Доходы клиентов',
-            'place':'Мест',
-            'people':'Специалистов',
-            'room':'Наличие помещений'
-            }
-
-        #request_data = [title:request.args.get(key) for key,title in headers.items()]
-
         branch = request.args.get('branch')
-        day = request.args.get('day')
-        hour = request.args.get('hour')
         money = request.args.get('money')
+        keep = request.args.get('keep')
+        eco = request.args.get('eco')
+        cost = request.args.get('cost')
         room = request.args.get('room')
+        people = request.args.get('people')
+
+        default_col = ['traffic_rank', 'toilet_rank']
+        branch_cols = []
 
         if branch in retail_list:
             branch_cols = reatail_col
+            if branch=='Супермаркет':
+                branch_cols+=['people_rank', 'auto_rank', 'riteil_rank', 'shop_rank']
+            if branch=='Магазин спиртных напитков':
+                branch_cols+=['taxi_rank', 'club_rank', 'alco_rank']
+            if branch=='Кондитерский магазин':
+                branch_cols+=['Условия для детей_ранг']
+            if branch=='Магазин здоровой пищи':
+                branch_cols+=['Спорт и отдых_ранг', 'auto_rank', 'Стоимость жизни_ранг']
+
         elif branch in service_list:
             branch_cols = service_col
-        elif branch in catering_list:
-            branch_cols = catering_col
+            if branch=='Парикмахерская':
+                branch_cols+=['taxi_rank', 'barbers_rank', 'houseparenda_rank']
+            if branch=='Спа салон':
+                branch_cols+=['people_rank', 'taxi_rank', 'auto_rank', 'spa_rank']
+            if branch=='Ремонт обуви':
+                branch_cols+=['shoes_rank']
+            if branch=='Ремонт ювелирных изделий':
+                branch_cols+=['money_rank', 'Стоимость жизни_ранг', 'jewelry_rank']
+            if branch=='Фото на документы':
+                branch_cols+=['people_rank', 'foto_rank']
+
         elif branch in culture_list:
             branch_cols = culture_col
+            if branch=='Ресторан':
+                branch_cols+=['taxi_rank', 'auto_rank', 'alco_rank', 'video_rank', 'Прибыль_общепит_rank', 'houseprise_rank']
+            if branch=='Кафе':
+                branch_cols+=['metro_rank', 'auto_rank', 'riteil_rank', 'Выручка_общепит_rank', ]
+            if branch=='Бар':
+                branch_cols+=['club_rank', 'video_rank', 'Выручка_клубы_rank', 'alco_rank']
+            if branch=='Ночной клуб':
+                branch_cols+=['club_rank', 'Стоимость жизни_ранг', 'light_rank', 'Прибыль_клубы_rank', 'alco_rank', 'houseprise_rank']
+
         elif branch in medical_list:
             branch_cols = medical_col
+            if branch=='Клиника':
+                branch_cols+=['metro_rank', 'people_rank', 'med_rank', 'trash_rank']
+            if branch=='Стоматологическая клиника':
+                branch_cols+=['stomat_rank', 'trash_rank']
+            if branch=='Ветеринарная клиника':
+                branch_cols+=['taxi_rank', 'auto_rank', 'vet_rank', 'trash_rank']
 
-        if day == 'будни':
-            #day_col = weekdays по умолчанию
-            day_col = []
+        if money== 'low':
+            money_col = []
         else:
-            #day_col = weekdays + weekend
-            day_col = weekend
+            money_col = ['money_rank', 'Стоимость жизни_ранг']
 
-        if hour == '6-18':
-            #hour_col = work_time по умолчанию
-            pass
+        if keep == 'yes':
+            keep_col = ['crime_rank', 'light_rank', 'video_rank', 'keep_rank', 'Безопасность_ранг', 'Соседи_ранг']           
         else:
-            #hour_col = work_time + rest_time
-            hour_col = rest_time
+            keep_col = []
+
+        if eco == 'yes':
+            eco_col = ['danger_rank', 'Чистота_ранг',  'Экология_ранг', 'ЖКХ_ранг']
+        else:
+            eco_col = []
+
+        if cost == 'yes':
+            cost_col = ['houseprise_rank']
+        else:
+            cost_col = []
 
         if room == 'yes':
-            room_col = ['arenda']
+            room_col = ['arenda_rank', 'houseparenda_rank']
         else:
             room_col = []
 
-        cols = default_col + branch_cols + day_col + hour_col + room_col
+        cols = default_col + branch_cols + money_col + keep_col + eco_col + cost_col + room_col
 
         data['rank'] = data[cols].mean(axis=1)
 
         #точки для визуализации
-        result = data.sort_values(by='rank', ascending=True).reset_index(drop=True)
+        result = data.sort_values(by='rank', ascending=True)
+        result['new_rank']=result['rank'].rank(ascending=True, method='first').astype(int)
 
     else:
-        result = data
+        result = data.reset_index(drop=False, names=['new_rank'])
 
-    return(result[0:50])
+    return result[0:top_n]
 
 def color_change(elev):
-    # Цвета маркеров
-    if(elev >= 40):
+    # цвета маркеров
+    if(elev >= 20):
         return('beige')
-    elif(elev >=30) & (elev <40):
+    elif(elev >=15) & (elev <20):
         return('orange')
-    elif(elev >=20) & (elev <30):
+    elif(elev >=10) & (elev <15):
         return('lightred')
-    elif(elev >=10) & (elev <20):
+    elif(elev >=5) & (elev <10):
         return('red')
     else:
         return('darkred')
@@ -123,45 +146,41 @@ def color_change(elev):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-
-    # Предсказание
+    # получение параметров из формы
+    department = request.args.get('department')
+    branch = request.args.get('branch')
+    #предсказание по введенным значениям
     result = get_result(data, request)
-    rank = result.index
-    lat, lon = result['lat'], result['lon']
-    elevation = result['ap_mac']
-    address = result['address']
+    session['data'] = result[['lat', 'lon', 'Адрес', 'new_rank']].to_dict('list')
+    return render_template('index.html', department=department, branch=branch)
 
-    # Карта
-    folium_map = folium.Map(location=[55.73702, 37.62256], zoom_start = 13, tiles = "OpenStreetMap")
-
-    # Маркеры
-    for lat, lon, elevation, rank, address in zip(lat, lon, elevation, rank, address):
-        folium.Marker(location=[lat, lon], popup="Ранг " + str(rank) + "<br>Адрес: "+ address, icon=folium.Icon(color = color_change(rank))).add_to(folium_map)
-        #return folium_map._repr_html_()
-
-    folium_map.save(root + '/templates/map.html')
-
-    return render_template('index.html')
-
-@app.route('/map')
+@app.route('/map', methods=['GET', 'POST'])
 def map():
+    # рендерин карты по введенным данным
+    try:
+        result = session.get('data', None)
+        rank = result['new_rank']
+        lat, lon = result['lat'], result['lon']
+        elevation = result['Адрес']  # адрес точки
+    except:
+        #заглушка, если данные не пришли
+        lat = (55.7211, 55.7371)
+        lon = (37.6061, 37.6237)
+        elevation = (12, 14)
+        rank = (1, 2)
+    
+    # карта
+    folium_map = folium.Map(location=[55.73702, 37.62256], zoom_start = 11, tiles = "OpenStreetMap")
 
-    r = int(random.triangular(0,100))
-    t = root+"templates/map_{i}.html"
-    for i in range(0,100):
-        f = t.format(i=i)
-        if os.path.exists(f):
-            os.remove(f)
-    f = t.format(i=r)
-    shutil.copy(root+"templates/map.html", f)
+    # маркеры
+    for lat, lon, elevation, rank in zip(lat, lon, elevation, rank):
+        icon_number = plugins.BeautifyIcon(number= rank, border_color=color_change(rank), text_color='darkred', \
+                      inner_icon_style='margin-top:0;')
+        folium.Marker(location=[lat, lon], icon=icon_number, tooltip=elevation).add_to(folium_map) #, popup=elevation
 
-    r = make_response(render_template(os.path.split(f)[1]))
-    r.cache_control.max_age = 0
-    r.cache_control.no_cache = True
-    r.cache_control.no_store = True
-    r.cache_control.must_revalidate = True
-    r.cache_control.proxy_revalidate = True
-    return r
+    html_string = folium_map.get_root().render()
+
+    return render_template_string(html_string)
 
 if __name__ == '__main__':
-    app.run(debug=True, port = 5005)
+    app.run(debug=True)

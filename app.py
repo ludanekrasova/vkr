@@ -179,6 +179,8 @@ def map():
         folium.Marker(location=[lat, lon], icon=icon_number, tooltip=elevation).add_to(folium_map) #, popup=elevation
 
     html_string = folium_map.get_root().render()
+   
+    html_string = html_string.replace('<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>','<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js" type="text/javascript"></script>')
 
     return render_template_string(html_string)
 

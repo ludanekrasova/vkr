@@ -170,7 +170,7 @@ def map():
         rank = (1, 2)
     
     # Карта
-    folium_map = folium.Map(location=[55.73702, 37.62256], zoom_start = 11, tiles = "OpenStreetMap")
+    folium_map = folium.Map(location=[55.73702, 37.62256], zoom_start=11, min_zoom = 11, max_zoom = 15, tiles = "OpenStreetMap")
 
     # Маркеры
     for lat, lon, elevation, rank in zip(lat, lon, elevation, rank):
